@@ -1,0 +1,7 @@
+# Coding-Agenten: Vergleichsnamen und Benchmarkwerte
+
+`coding_agent_display_benchmark_results` in `benchmark_extra_views.sql` stellt pro deduplizierter Coding-Agent-Konfiguration und Benchmark die ursprüngliche Run-ID, Agenten-Slug, internen Agentennamen, den in der Quelle angezeigten Agentennamen, strukturierten Modellnamen sowie den angezeigten Modellnamen bereit. Bei vier Router-Konfigurationen ist das Modellobjekt in der Quelle NULL; ihr zusammengesetzter Modellname wird aus dem Quellenfeld `display.model` angezeigt, ohne eine Modell-ID oder ein einzelnes Modell zu unterstellen.
+
+Die View enthält außerdem den Benchmark-Reward, mittlere Input-/Output-Tokens sowie die durchschnittlichen Kosten und die mittlere Agentenzeit **für den Index-Aufgabenmix**. Diese beiden aggregierten Werte sind ausdrücklich nicht die Kosten oder Laufzeit des jeweils genannten Einzelbenchmarks. Quellen-URL, Seitenhash und Abrufzeit bleiben erhalten; das Originalergebnis ist als JSON abrufbar.
+
+Validierung des geprüften Stands: Die Vergleichstabellen ließen sich vollständig auf 36 eindeutige Runs und ihre 108 Run-/Benchmark-Paare abbilden. Alle 108 vergleichbaren Scores stimmen nach Umrechnung des Quellenanteils auf die angezeigte 0–100-Skala und Rundung überein. SQLite `quick_check` war `ok`. Diese Konsistenzprüfung bestätigt keine Vollständigkeit über noch nicht archivierte Agenten und keine individuellen Testlaufzeiten.

@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Reproducible source-to-database provider-price checks, including zero/NULL."""
+import datetime,sqlite3
+from pathlib import Path
+P=Path(__file__).resolve().parent;c=sqlite3.connect(P/'artificial_analysis.sqlite3',timeout=60)
+def scalar(q,args=()):return c.execute(q,args).fetchone()[0]
+def field_check(table,col,path):
+ q=f'''select count(*),sum(case when json_type(raw_json,?) in ('integer','real') then 1 else 0 end),
+ sum(case when json_type(raw_json,?) in ('integer','real') and "{col}" is not json_extract(raw_json,?) then 1 when coalesce(json_type(raw_json,?),'missing') not in ('integer','real') and "{col}" is not null then 1 else 0 end),
+ sum(case when json_type(raw_json,?) in ('integer','real') and json_extract(raw_json,?)=0 and "{col}"=0 then 1 else 0 end) from "{table}"'''
+ n,p,m,z=c.execute(q,(path,path,path,path,path,path)).fetchone();return n,p or 0,m or 0,z or 0
+checks=[]
+for col,path in [('price_1m_input_usd','$.pricing.price1mInputTokens'),('price_1m_output_usd','$.pricing.price1mOutputTokens'),('cache_hit_usd_per_1m','$.pricing.cacheHitPrice'),('cache_write_usd_per_1m','$.pricing.cacheWritePrice')]:checks.append(('LLM '+col,*field_check('provider_endpoint_records',col,path)))
+for col,path in [('price_per_1000_images_usd','$.pricePer1kImages'),('video_price_usd_per_minute','$.pricePerMinute'),('tts_price_usd_per_million_chars','$.pricePer1mCharacters')]:checks.append(('Medien '+col,*field_check('media_endpoint_records',col,path)))
+rows='\n'.join(f'| {label} | {n} | {present} | {bad} | {zero} |' for label,n,present,bad,zero in checks)
+comparison=c.execute("""select count(*),sum(abs(a.price_1m_input_usd-b.price_1m_input_usd)>1e-7 OR abs(a.price_1m_output_usd-b.price_1m_output_usd)>1e-7) from provider_endpoint_records a join provider_endpoint_records b on a.source_url=b.source_url and a.endpoint_id=b.endpoint_id and a.array_kind='hostModels' and b.array_kind='rows' """).fetchone();compared= comparison[0] or 0;disagree=comparison[1] or 0
+range_rows=c.execute('select count(*),sum(amount_parse_warning is not null) from provider_tiered_pricing').fetchone();tiermismatch=scalar('select count(*) from provider_tier_validation where base_price_matches=0')
+counts=c.execute("select count(*),sum(linked_provider_id is null),sum(linked_model_id is null) from provider_endpoint_id_linked where array_kind='rows'").fetchone();conflicts=scalar('select count(*) from provider_endpoint_id_conflicts')
+count_cache=scalar("select count(*) from provider_price_scenarios where cache_price_absent=1")
+text=f'''# Prüflauf Providerpreise\n\nUTC: {datetime.datetime.now(datetime.timezone.utc).isoformat()}\n\nDer Vergleich erfolgt je Datensatz direkt gegen das archivierte JSON, nicht gegen einen späteren Anbieterpreis. Unter „Quellzahlen“ zählen auch explizite Nullen; fehlende, nichtnumerische oder `$undefined`-Felder müssen in der numerischen Spalte NULL sein.\n\n| Feld | Quellobjekte | Quellzahlen | Abweichungen / falsch befüllte Leerwerte | explizite Nullen erhalten |\n|---|---:|---:|---:|---:|\n{rows}\n\n- Einander entsprechende `hostModels`-/`rows`-Objekte derselben Quelle und Endpunkt-ID: {compared} Paare; bei {disagree} unterscheiden sich Input- oder Outputpreise. Die Quellen bleiben getrennt; Ursache nicht als geklärt annehmen.\n- Kontextstaffeln: {range_rows[0]} Quellzeilen; {range_rows[1] or 0} mit uneindeutigem Zahlenformat. {tiermismatch} Basistarif-Fußnoten weichen vom normalen Endpunktpreis ab. Rohangaben bleiben erhalten.\n- Cachehaltige Mischpreisszenarien ohne ausgewiesenen Cachepreis: {count_cache}. Die ausgewiesene Mischung impliziert hier rechnerisch den normalen Inputpreis; kein tatsächlicher Cachepreis wird erfunden.\n- Endpunkt-IDs in Tabellenobjekten: {counts[0]}, davon {counts[1] or 0} ohne über Endpunkt-ID belegte Provider-UUID und {counts[2] or 0} ohne belegte Modell-UUID. {conflicts} beobachtete Endpunkt-UUID-Konflikte. Keine Namensfusion.\n- SQLite `quick_check`: {scalar('pragma quick_check')}.\n\nUnterschiedliche Anbieter, Tarifbedingungen, Varianten und Quellenstände sind keine automatisch vergleichbaren unabhängigen Messungen. Ein in der Quelle als 0 gelieferter Betrag belegt nicht, dass jede Nutzung ohne Bedingungen kostenlos ist.\n'''
+(P/'PROVIDER_PRICE_QUALITY.md').write_text(text,encoding='utf8');print(text)

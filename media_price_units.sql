@@ -1,0 +1,9 @@
+-- Exact unit conversions only; these are prices for generated units, not arbitrary tasks.
+CREATE VIEW IF NOT EXISTS media_endpoint_normalized_prices AS
+SELECT source_url,page_sha256,retrieved_at_utc,modality,endpoint_id,endpoint_slug,endpoint_name,
+provider_id,provider_slug,provider_name,model_id,model_slug,model_name,
+price_per_1000_images_usd,price_per_1000_images_usd/1000.0 AS price_per_generated_image_usd,
+video_price_usd_per_minute,video_price_usd_per_minute/60.0 AS price_per_generated_video_second_usd,
+tts_price_usd_per_million_chars,tts_price_usd_per_million_chars/1000000.0 AS price_per_text_character_usd,
+median_generation_seconds,median_chars_per_second,time_percentiles_consistent
+FROM latest_media_endpoints;

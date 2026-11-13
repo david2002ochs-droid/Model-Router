@@ -1,0 +1,8 @@
+CREATE VIEW IF NOT EXISTS all_provider_observations AS
+SELECT source_url,page_sha256,model_slug,table_number,row_number,provider,cost_per_task_usd,time_per_task_minutes,
+CAST(NULL AS REAL) AS endpoint_accuracy_index_percent,first_answer_token_seconds,error_rate_percent,context_window,function_calling,json_mode,license,raw_cells_json
+FROM provider_observations
+UNION ALL
+SELECT source_url,page_sha256,model_slug,table_number,row_number,provider,cost_per_task_usd,time_per_task_minutes,
+endpoint_accuracy_index_percent,first_answer_token_seconds,error_rate_percent,context_window,function_calling,json_mode,license,raw_cells_json
+FROM provider_accuracy_observations;
