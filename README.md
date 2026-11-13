@@ -1,6 +1,6 @@
 # Model Routing
 
-Dieser private Datenkatalog enthält den auf Nutzerwunsch eingefrorenen Arbeitsstand aus Artificial Analysis: die SQLite-Datenbank einschließlich archivierter Quellseiten, strukturierte Auswertungen, Extraktoren, Prüfungen und eine lokale Suchoberfläche. Die Sammlung wurde beendet; es wird beim Klonen oder Starten der Oberfläche nichts nachgeladen.
+Dieser Datenkatalog enthält den auf Nutzerwunsch eingefrorenen Arbeitsstand aus Artificial Analysis: die SQLite-Datenbank einschließlich archivierter Quellseiten, strukturierte Auswertungen, Extraktoren, Prüfungen und eine lokale Suchoberfläche. Die Sammlung wurde beendet; es wird beim Klonen oder Starten der Oberfläche nichts nachgeladen.
 
 - **Datenbank:** `artificial_analysis.sqlite3` (über Git LFS; vollständiger Abruf erfordert `git lfs pull`).
 - **Lokale Suche:** `python3 browse.py`, danach `http://127.0.0.1:8765` auf demselben Rechner öffnen.
